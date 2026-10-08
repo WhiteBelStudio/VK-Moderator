@@ -1112,8 +1112,9 @@ class MarriageModule:
                 ).days,
             )
 
-        except Exception:
+        except (TypeError, ValueError, OverflowError, sqlite3.Error):
 
+            logger.exception("Failed to calculate marriage duration.")
             return 0
 
     @staticmethod
@@ -1142,8 +1143,9 @@ class MarriageModule:
                 "%d.%m.%Y"
             )
 
-        except Exception:
+        except (TypeError, ValueError, OverflowError):
 
+            logger.exception("Failed to format marriage date.")
             return "неизвестно"
 
     @staticmethod
@@ -1207,9 +1209,9 @@ class MarriageModule:
 
                 return result[0]
 
-        except Exception:
+        except (VKAPIError, sqlite3.Error, TypeError, ValueError, KeyError):
 
-            pass
+            logger.exception("Optional marriage operation failed.")
 
         return {
             "id": int(user_id),
@@ -1313,8 +1315,9 @@ class MarriageModule:
                 user["xp"] or 0
             )
 
-        except Exception:
+        except (TypeError, ValueError, OverflowError, sqlite3.Error):
 
+            logger.exception("Failed to calculate marriage duration.")
             return 0
 
     def get_pair_xp(
@@ -1471,7 +1474,9 @@ class MarriageModule:
 
             return True
 
-        except Exception:
+        except (VKAPIError, sqlite3.Error, TypeError, ValueError, KeyError):
+
+            logger.exception("Marriage command operation failed.")
 
             await self.send(
                 peer_id,
@@ -1509,9 +1514,9 @@ class MarriageModule:
                 notification,
             )
 
-        except Exception:
+        except (VKAPIError, sqlite3.Error, TypeError, ValueError, KeyError):
 
-            pass
+            logger.exception("Optional marriage operation failed.")
 
         await self.send(
             peer_id,
@@ -1828,9 +1833,9 @@ class MarriageModule:
                 ),
             )
 
-        except Exception:
+        except (VKAPIError, sqlite3.Error, TypeError, ValueError, KeyError):
 
-            pass
+            logger.exception("Optional marriage operation failed.")
 
         return True
 
@@ -1895,9 +1900,9 @@ class MarriageModule:
                 "ℹ️ Предложение о браке было отменено.",
             )
 
-        except Exception:
+        except (VKAPIError, sqlite3.Error, TypeError, ValueError, KeyError):
 
-            pass
+            logger.exception("Optional marriage operation failed.")
 
         return True
 
@@ -2568,7 +2573,9 @@ class MarriageModule:
                     peer_id
                 )
 
-        except Exception:
+        except (VKAPIError, sqlite3.Error, TypeError, ValueError, KeyError):
+
+            logger.exception("Marriage command operation failed.")
 
             await self.send(
                 peer_id,
