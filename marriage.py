@@ -1258,7 +1258,7 @@ class MarriageModule:
 
                         return name
 
-            except Exception:
+            except (VKAPIError, sqlite3.Error, TypeError, ValueError, KeyError):
 
                 pass
 
@@ -1758,7 +1758,7 @@ class MarriageModule:
                     announcement,
                 )
 
-            except Exception:
+            except (VKAPIError, sqlite3.Error, TypeError, ValueError, KeyError):
 
                 pass
 
@@ -2002,7 +2002,7 @@ class MarriageModule:
                     ),
                 )
 
-            except Exception:
+            except (VKAPIError, sqlite3.Error, TypeError, ValueError, KeyError):
 
                 pass
 
