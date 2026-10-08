@@ -75,7 +75,7 @@ class CommandRouter:
                         str(text),
                         first_name,
                     )
-                except Exception:
+                except (RuntimeError, ValueError, TypeError, KeyError):
                     logger.exception("Command module failed: %s", command)
                     continue
                 if handled:
@@ -100,14 +100,14 @@ class CommandRouter:
                         str(text),
                     )
                 )
-            except Exception:
+            except (RuntimeError, ValueError, TypeError, KeyError):
                 logger.exception("Command handler failed: %s", command)
                 await self.send(
                     peer_id,
                     "❌ При обработке команды произошла ошибка.",
                 )
                 return True
-        except Exception:
+        except (RuntimeError, ValueError, TypeError, KeyError):
             logger.exception("Command handler failed: %s", command)
             await self.send(
                 peer_id,
