@@ -2,9 +2,34 @@ from __future__ import annotations
 
 import os
 import sqlite3
+from pathlib import Path
 
 
 class Database:
+    """Единая основная SQLite-база бота с версионируемыми миграциями."""
+
+    SCHEMA_VERSION = 1
+
+    def _migration_path(self) -> str:
+        return os.path.join(os.path.dirname(os.path.abspath(__file__)), "migrations")
+
+    def _apply_migrations(self, connection: sqlite3.Connection) -> None:
+        connection.execute("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)")
+        applied = {row[0] for row in connection.execute("SELECT version FROM schema_migrations")}
+        migrations = sorted(Path(self._migration_path()).glob("*.sql"))
+        for migration in migrations:
+            try:
+                version = int(migration.stem.split("_", 1)[0])
+            except ValueError:
+                continue
+            if version in applied:
+                continue
+            connection.executescript(migration.read_text(encoding="utf-8"))
+            connection.execute("INSERT INTO schema_migrations(version) VALUES (?)", (version,))
+        current = connection.execute("SELECT COALESCE(MAX(version), 0) FROM schema_migrations").fetchone()[0]
+        if current > self.SCHEMA_VERSION:
+            raise RuntimeError(f"Database schema version {current} is newer than supported {self.SCHEMA_VERSION}.")
+
     """Единая основная SQLite-база бота."""
 
     def __init__(self, path: str | None = None) -> None:
@@ -28,6 +53,7 @@ class Database:
 
     def _init_db(self) -> None:
         with self.connect() as db:
+            self._apply_migrations(db)
             db.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS users (
