@@ -166,6 +166,15 @@ class VKAPIClient:
             f"VK API request failed: {method}"
         ) from last_error
 
+    async def send_message(self, peer_id: int, message: str, random_id: int = 0) -> int:
+        result = await self.call(
+            "messages.send",
+            peer_id=int(peer_id),
+            random_id=int(random_id),
+            message=str(message),
+        )
+        return int(result["response"])
+
     async def get_group(self, group_id: int) -> dict[str, Any]:
         result = await self.call(
             "groups.getById",
