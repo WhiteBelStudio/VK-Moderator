@@ -30,8 +30,6 @@ class Database:
         if current > self.SCHEMA_VERSION:
             raise RuntimeError(f"Database schema version {current} is newer than supported {self.SCHEMA_VERSION}.")
 
-    """Единая основная SQLite-база бота."""
-
     def __init__(self, path: str | None = None) -> None:
         base_dir = os.path.dirname(os.path.abspath(__file__))
         data_dir = os.path.join(base_dir, "data")
