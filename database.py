@@ -52,42 +52,7 @@ class Database:
     def _init_db(self) -> None:
         with self.connect() as db:
             self._apply_migrations(db)
-            db.executescript(
-                """
-                CREATE TABLE IF NOT EXISTS users (
-                    user_id INTEGER PRIMARY KEY,
-                    first_name TEXT NOT NULL DEFAULT '',
-                    last_name TEXT NOT NULL DEFAULT '',
-                    xp INTEGER NOT NULL DEFAULT 0,
-                    rp INTEGER NOT NULL DEFAULT 0,
-                    warnings INTEGER NOT NULL DEFAULT 0,
-                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-                );
-
-                CREATE INDEX IF NOT EXISTS idx_users_xp ON users(xp DESC);
-
-                CREATE TABLE IF NOT EXISTS rp_actions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    action TEXT NOT NULL,
-                    amount INTEGER NOT NULL DEFAULT 0,
-                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
-                );
-
-                CREATE TABLE IF NOT EXISTS warnings (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    reason TEXT NOT NULL DEFAULT '',
-                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
-                );
-
-                CREATE INDEX IF NOT EXISTS idx_rp_actions_user ON rp_actions(user_id);
-                CREATE INDEX IF NOT EXISTS idx_warnings_user ON warnings(user_id);
-                """
-            )
+            # Schema is created exclusively by numbered migrations.
 
     def ensure_user(self, user_id: int, first_name: str = "", last_name: str = "") -> None:
         with self.connect() as db:
