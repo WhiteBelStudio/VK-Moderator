@@ -15,8 +15,26 @@ class RulesSystem:
         "!rules",
     }
 
-    def __init__(self):
+    def __init__(self, vk=None):
+        self.vk = vk
         self.rules_text = self._build_rules()
+
+    async def handle_message(
+        self,
+        peer_id: int,
+        user_id: int,
+        text: str,
+        first_name: str | None = None,
+    ) -> bool:
+        command = str(text or "").strip().split(maxsplit=1)[0].casefold()
+        if command not in self.COMMANDS or self.vk is None:
+            return False
+        await self.vk.send_message(
+            peer_id=int(peer_id),
+            message=self.rules_text,
+        )
+        return True
+
 
     # ========================================================
     # RULES
