@@ -6,6 +6,7 @@ import logging
 from command_router import CommandRouter
 from config import load_config
 from database import Database
+from logging_config import configure_logging
 from marriage import MarriageModule
 from rules import RulesSystem
 from vk_api import VKAPIClient, VKAPIError
@@ -42,12 +43,6 @@ async def handle_event(
 
 async def async_main() -> None:
     config = load_config()
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s | %(levelname)s | %(message)s",
-    )
-
     db = Database()
 
     async with VKAPIClient(
@@ -81,7 +76,15 @@ async def async_main() -> None:
 
 
 def main() -> None:
-    asyncio.run(async_main())
+    configure_logging()
+    logger.info("Starting VK-Moderator.")
+    try:
+        asyncio.run(async_main())
+    except KeyboardInterrupt:
+        logger.info("Shutdown requested by user.")
+    except Exception:
+        logger.exception("Fatal application error.")
+        raise
 
 
 if __name__ == "__main__":
