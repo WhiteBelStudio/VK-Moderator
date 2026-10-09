@@ -9,7 +9,7 @@ from pathlib import Path
 class Database:
     """Единая основная SQLite-база бота с версионируемыми миграциями."""
 
-    SCHEMA_VERSION = 1
+    SCHEMA_VERSION = 2
 
     def _migration_path(self) -> str:
         return os.path.join(os.path.dirname(os.path.abspath(__file__)), "migrations")
@@ -75,6 +75,23 @@ class Database:
                 "SELECT * FROM users WHERE user_id = ?",
                 (int(user_id),),
             ).fetchone()
+
+    def update_xp(self, user_id: int, xp: int, level: int) -> None:
+        """Persist XP and level calculated by XPSystem."""
+        normalized_user_id = int(user_id)
+        normalized_xp = max(0, int(xp))
+        normalized_level = max(1, int(level))
+
+        self.ensure_user(normalized_user_id)
+        with closing(self.connect()) as db, db:
+            db.execute(
+                """
+                UPDATE users
+                SET xp = ?, level = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ?
+                """,
+                (normalized_xp, normalized_level, normalized_user_id),
+            )
 
     def add_xp(self, user_id: int, amount: int) -> int:
         self.ensure_user(user_id)
