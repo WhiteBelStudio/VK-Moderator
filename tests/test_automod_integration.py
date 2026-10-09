@@ -88,5 +88,29 @@ class AutoModerationIntegrationTests(unittest.IsolatedAsyncioTestCase):
         )
         router.dispatch.assert_not_awaited()
 
+    async def test_warning_cooldown_still_deletes_later_violations(self):
+        router = AsyncMock()
+        automod = AutoModerationSystem(max_message_length=100)
+
+        def event(message_id, user_id):
+            return {
+                "type": "message_new",
+                "object": {
+                    "message": {
+                        "id": message_id,
+                        "text": "x" * 101,
+                        "peer_id": 2000000001,
+                        "from_id": user_id,
+                    }
+                },
+            }
+
+        await handle_event(event(546, 12348), router, automod)
+        await handle_event(event(547, 12348), router, automod)
+
+        self.assertEqual(router.vk.call.await_count, 2)
+        self.assertEqual(router.send.await_count, 1)
+        router.dispatch.assert_not_awaited()
+
 if __name__ == "__main__":
     unittest.main()
