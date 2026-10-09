@@ -12,6 +12,7 @@ from typing import Deque
 class AutoModerationResult:
     violated: bool = False
     reason: str = ""
+    notify: bool = True
 
 
 class AutoModerationSystem:
@@ -380,7 +381,11 @@ class AutoModerationSystem:
                 "",
             )
 
-            return AutoModerationResult()
+            return AutoModerationResult(
+                violated=True,
+                reason=reason,
+                notify=False,
+            )
 
         self._last_violation[
             user_id
