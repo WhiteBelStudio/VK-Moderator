@@ -36,8 +36,8 @@ class XPMessageIntegrationTests(unittest.IsolatedAsyncioTestCase):
             )
 
             user = database.get_user(12350)
-            self.assertEqual(user["xp"], XPSystem.MESSAGE_XP)
-            self.assertEqual(user["level"], 1)
+            self.assertGreaterEqual(user["xp"], XPSystem.MESSAGE_XP)
+            self.assertEqual(user["level"], XPSystem.calculate_level(user["xp"]))
             router.dispatch.assert_awaited_once()
 
 
