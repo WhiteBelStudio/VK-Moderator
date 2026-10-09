@@ -1,4 +1,5 @@
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 import unittest
 from pathlib import Path
 
@@ -54,6 +55,14 @@ class DatabaseUserTests(unittest.TestCase):
         self.assertEqual([row["user_id"] for row in top], [102, 103])
         self.assertEqual([row["xp"] for row in top], [150, 100])
 
+
+    def test_concurrent_xp_updates_are_atomic(self):
+        self.db.ensure_user(12347)
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            list(executor.map(lambda _: self.db.add_xp(12347, 1), range(40)))
+
+        user = self.db.get_user(12347)
+        self.assertEqual(user["xp"], 40)
 
 if __name__ == "__main__":
     unittest.main()
