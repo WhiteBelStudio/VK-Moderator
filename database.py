@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+from datetime import datetime, timedelta, timezone
 from contextlib import closing
 from pathlib import Path
 
@@ -9,7 +10,7 @@ from pathlib import Path
 class Database:
     """Единая основная SQLite-база бота с версионируемыми миграциями."""
 
-    SCHEMA_VERSION = 2
+    SCHEMA_VERSION = 3
 
     def _migration_path(self) -> str:
         return os.path.join(os.path.dirname(os.path.abspath(__file__)), "migrations")
@@ -139,6 +140,131 @@ class Database:
                 (int(user_id), str(reason)),
             )
         return self.get_warning_count(user_id)
+
+    def remove_warning(self, user_id: int) -> int:
+        """Remove the newest warning for a user and return the remaining count."""
+        with closing(self.connect()) as db, db:
+            db.execute(
+                """
+                DELETE FROM warnings
+                WHERE id = (
+                    SELECT id FROM warnings
+                    WHERE user_id = ?
+                    ORDER BY id DESC
+                    LIMIT 1
+                )
+                """,
+                (int(user_id),),
+            )
+            row = db.execute(
+                "SELECT COUNT(*) AS count FROM warnings WHERE user_id = ?",
+                (int(user_id),),
+            ).fetchone()
+            return int(row["count"])
+
+    def set_role(self, user_id: int, role: str) -> None:
+        normalized_role = str(role).strip().casefold()
+        if normalized_role not in {"user", "moderator", "admin"}:
+            raise ValueError("role must be user, moderator, or admin")
+        with closing(self.connect()) as db, db:
+            if normalized_role == "user":
+                db.execute("DELETE FROM user_roles WHERE user_id = ?", (int(user_id),))
+            else:
+                db.execute(
+                    """
+                    INSERT INTO user_roles(user_id, role, updated_at)
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(user_id) DO UPDATE SET
+                        role = excluded.role,
+                        updated_at = CURRENT_TIMESTAMP
+                    """,
+                    (int(user_id), normalized_role),
+                )
+
+    def get_role(self, user_id: int) -> str:
+        with closing(self.connect()) as db, db:
+            row = db.execute(
+                "SELECT role FROM user_roles WHERE user_id = ?",
+                (int(user_id),),
+            ).fetchone()
+            return str(row["role"]) if row else "user"
+
+    def set_mute(
+        self,
+        user_id: int,
+        duration_minutes: int,
+        reason: str,
+        created_by: int,
+    ) -> None:
+        duration = int(duration_minutes)
+        if not 1 <= duration <= 10_080:
+            raise ValueError("mute duration must be between 1 and 10080 minutes")
+        expires_at = (
+            datetime.now(timezone.utc) + timedelta(minutes=duration)
+        ).isoformat(timespec="seconds")
+        with closing(self.connect()) as db, db:
+            db.execute(
+                """
+                INSERT INTO moderation_restrictions(
+                    user_id, restriction_type, expires_at, reason, created_by
+                )
+                VALUES (?, 'mute', ?, ?, ?)
+                ON CONFLICT(user_id) DO UPDATE SET
+                    restriction_type = 'mute',
+                    expires_at = excluded.expires_at,
+                    reason = excluded.reason,
+                    created_by = excluded.created_by,
+                    created_at = CURRENT_TIMESTAMP
+                """,
+                (int(user_id), expires_at, str(reason), int(created_by)),
+            )
+
+    def is_muted(self, user_id: int) -> bool:
+        with closing(self.connect()) as db, db:
+            row = db.execute(
+                """
+                SELECT expires_at FROM moderation_restrictions
+                WHERE user_id = ? AND restriction_type = 'mute'
+                """,
+                (int(user_id),),
+            ).fetchone()
+            if row is None:
+                return False
+            try:
+                expires_at = datetime.fromisoformat(str(row["expires_at"]))
+                active = expires_at > datetime.now(timezone.utc)
+            except (TypeError, ValueError):
+                active = False
+            if not active:
+                db.execute(
+                    "DELETE FROM moderation_restrictions WHERE user_id = ?",
+                    (int(user_id),),
+                )
+            return active
+
+    def remove_mute(self, user_id: int) -> bool:
+        with closing(self.connect()) as db, db:
+            cursor = db.execute(
+                "DELETE FROM moderation_restrictions WHERE user_id = ? AND restriction_type = 'mute'",
+                (int(user_id),),
+            )
+            return cursor.rowcount > 0
+
+    def log_moderation_action(
+        self,
+        actor_id: int,
+        target_id: int,
+        action: str,
+        reason: str = "",
+    ) -> None:
+        with closing(self.connect()) as db, db:
+            db.execute(
+                """
+                INSERT INTO moderation_actions(actor_id, target_id, action, reason)
+                VALUES (?, ?, ?, ?)
+                """,
+                (int(actor_id), int(target_id), str(action), str(reason)),
+            )
 
     def get_xp_top(self, limit: int = 10) -> list[sqlite3.Row]:
         limit = max(1, min(int(limit), 50))
