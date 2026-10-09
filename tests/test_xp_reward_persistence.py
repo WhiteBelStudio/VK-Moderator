@@ -39,6 +39,16 @@ class XPRewardPersistenceTests(unittest.TestCase):
             self.assertEqual(user["level"], 2)
             self.assertEqual(user["xp"], threshold)
 
+    def test_configured_message_reward_is_used(self):
+        with tempfile.TemporaryDirectory() as directory:
+            database = Database(str(Path(directory) / "bot.db"))
+            xp = XPSystem(database, message_xp=7)
+
+            result = xp.process_message(12345)
+
+            self.assertEqual(result["xp_added"], 7)
+            self.assertGreaterEqual(database.get_user(12345)["xp"], 7)
+
     def test_non_positive_reward_does_not_change_persisted_xp(self):
         with tempfile.TemporaryDirectory() as directory:
             database = Database(str(Path(directory) / "bot.db"))
