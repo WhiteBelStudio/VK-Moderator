@@ -23,6 +23,8 @@ class _InvalidJSONResponse:
 
 
 class _InvalidJSONSession:
+    closed = False
+
     def __init__(self):
         self.calls = 0
 
@@ -40,6 +42,8 @@ class _PayloadResponse(_InvalidJSONResponse):
 
 
 class _PayloadSession:
+    closed = False
+
     def __init__(self, payload):
         self.payload = payload
 
