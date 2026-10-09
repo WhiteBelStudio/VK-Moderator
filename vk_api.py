@@ -159,7 +159,8 @@ class VKAPIClient:
                 ) from exc
             except (VKAPIMethodError, VKAPIResponseError):
                 raise
-            except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
+            except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as exc:
+                # Invalid JSON responses are transient transport/protocol failures too.
                 last_error = exc
 
                 if attempt < self.retries:
