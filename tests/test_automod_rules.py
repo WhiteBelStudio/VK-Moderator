@@ -36,5 +36,58 @@ class AutoModerationRuleTests(unittest.TestCase):
         self.assertEqual(result.reason, "Слишком длинное сообщение")
 
 
+    def test_flood_is_detected_after_configured_window_count(self):
+        system = AutoModerationSystem(flood_messages=3, flood_window=5.0)
+        system.remember(201, "first")
+        system.remember(201, "second")
+
+        result = system.check(201, "third")
+
+        self.assertTrue(result.violated)
+        self.assertEqual(result.reason, "Флуд")
+
+    def test_repeated_message_is_detected(self):
+        system = AutoModerationSystem(duplicate_limit=3)
+        system.remember(202, "same message")
+        system.remember(202, "same message")
+
+        result = system.check(202, "same message")
+
+        self.assertTrue(result.violated)
+        self.assertEqual(result.reason, "Повтор одинакового сообщения")
+
+    def test_mention_limit_is_enforced(self):
+        system = AutoModerationSystem(mention_limit=3)
+
+        result = system.check(203, "@alice @bob @charlie")
+
+        self.assertTrue(result.violated)
+        self.assertEqual(result.reason, "Слишком много упоминаний")
+
+    def test_link_limit_is_enforced(self):
+        system = AutoModerationSystem()
+        message = " ".join(f"https://example.com/{index}" for index in range(5))
+
+        result = system.check(204, message)
+
+        self.assertTrue(result.violated)
+        self.assertEqual(result.reason, "Слишком много ссылок")
+
+    def test_excessive_caps_is_detected(self):
+        system = AutoModerationSystem()
+
+        result = system.check(205, "THIS IS VERY LOUD")
+
+        self.assertTrue(result.violated)
+        self.assertEqual(result.reason, "Чрезмерное использование заглавных букв")
+
+    def test_repeated_characters_are_detected(self):
+        system = AutoModerationSystem()
+
+        result = system.check(206, "x" * 10)
+
+        self.assertTrue(result.violated)
+        self.assertEqual(result.reason, "Чрезмерное повторение символов")
+
 if __name__ == "__main__":
     unittest.main()
