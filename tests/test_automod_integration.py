@@ -1,7 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 from automod import AutoModerationSystem
 from database import Database
@@ -111,6 +111,32 @@ class AutoModerationIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(router.vk.call.await_count, 2)
         self.assertEqual(router.send.await_count, 1)
         router.dispatch.assert_not_awaited()
+
+    async def test_configured_admin_bypasses_automod(self):
+        router = AsyncMock()
+        automod = Mock()
+        event = {
+            "type": "message_new",
+            "object": {
+                "message": {
+                    "id": 548,
+                    "text": "x" * 101,
+                    "peer_id": 2000000001,
+                    "from_id": 12349,
+                }
+            },
+        }
+
+        await handle_event(event, router, automod, admin_ids={12349})
+
+        automod.check.assert_not_called()
+        router.vk.call.assert_not_awaited()
+        router.send.assert_not_awaited()
+        router.dispatch.assert_awaited_once_with(
+            peer_id=2000000001,
+            user_id=12349,
+            text="x" * 101,
+        )
 
 if __name__ == "__main__":
     unittest.main()
