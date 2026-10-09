@@ -20,6 +20,10 @@ async def handle_event(
     router: CommandRouter,
 ) -> None:
     """Передаёт сообщения VK в единый маршрутизатор команд."""
+    if not isinstance(event, dict):
+        logger.warning("Ignoring malformed VK event: expected a dictionary.")
+        return
+
     if event.get("type") != "message_new":
         return
 
@@ -40,9 +44,16 @@ async def handle_event(
     if not text or peer_id is None or user_id is None:
         return
 
+    try:
+        normalized_peer_id = int(peer_id)
+        normalized_user_id = int(user_id)
+    except (TypeError, ValueError):
+        logger.warning("Ignoring malformed VK message event: invalid peer_id/from_id.")
+        return
+
     await router.dispatch(
-        peer_id=int(peer_id),
-        user_id=int(user_id),
+        peer_id=normalized_peer_id,
+        user_id=normalized_user_id,
         text=text,
     )
 
