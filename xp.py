@@ -264,8 +264,13 @@ class XPSystem:
     def __init__(
         self,
         db: Database | None = None,
+        message_xp: int | None = None,
     ):
         self.db = db
+        self.message_xp = max(
+            1,
+            int(self.MESSAGE_XP if message_xp is None else message_xp),
+        )
 
         # Временные cooldown.
         self._cooldowns: dict[
@@ -1280,10 +1285,7 @@ class XPSystem:
     ) -> dict:
 
         if amount is None:
-
-            amount = (
-                self.MESSAGE_XP
-            )
+            amount = self.message_xp
 
         return self.reward(
             user_id=user_id,
