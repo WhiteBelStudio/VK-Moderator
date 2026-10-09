@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 import time
 from collections import defaultdict, deque
@@ -55,12 +56,16 @@ class AutoModerationSystem:
             int(max_warnings),
         )
 
+        # Explicit constructor configuration wins; otherwise load a comma-separated
+        # list from FORBIDDEN_WORDS. An unset variable means no extra words.
+        configured_words = (
+            forbidden_words
+            if forbidden_words is not None
+            else os.getenv("FORBIDDEN_WORDS", "").split(",")
+        )
         self.forbidden_words = [
             str(word).casefold().strip()
-            for word in (
-                forbidden_words
-                or []
-            )
+            for word in configured_words
             if str(word).strip()
         ]
 
