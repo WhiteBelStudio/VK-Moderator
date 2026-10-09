@@ -515,6 +515,7 @@ class ProfileSystem:
             )
 
         except (
+            IndexError,
             KeyError,
             TypeError,
             ValueError,
@@ -529,6 +530,7 @@ class ProfileSystem:
             )
 
         except (
+            IndexError,
             KeyError,
             TypeError,
             ValueError,
