@@ -63,5 +63,30 @@ class HandleEventTests(unittest.IsolatedAsyncioTestCase):
         router.dispatch.assert_not_awaited()
 
 
+
+    async def test_ignores_non_dictionary_event(self):
+        router = AsyncMock()
+
+        await handle_event(None, router)
+
+        router.dispatch.assert_not_awaited()
+
+    async def test_ignores_invalid_message_identifiers(self):
+        router = AsyncMock()
+        event = {
+            "type": "message_new",
+            "object": {
+                "message": {
+                    "text": "!help",
+                    "peer_id": "not-a-number",
+                    "from_id": 12345,
+                }
+            },
+        }
+
+        await handle_event(event, router)
+
+        router.dispatch.assert_not_awaited()
+
 if __name__ == "__main__":
     unittest.main()
