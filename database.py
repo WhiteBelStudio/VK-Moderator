@@ -12,6 +12,16 @@ class Database:
 
     SCHEMA_VERSION = 3
 
+    @staticmethod
+    def _positive_user_id(value: int) -> int:
+        try:
+            normalized = int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("user_id must be a positive integer") from exc
+        if normalized <= 0:
+            raise ValueError("user_id must be a positive integer")
+        return normalized
+
     def _migration_path(self) -> str:
         return os.path.join(os.path.dirname(os.path.abspath(__file__)), "migrations")
 
@@ -73,19 +83,19 @@ class Database:
                     END,
                     updated_at = CURRENT_TIMESTAMP
                 """,
-                (int(user_id), str(first_name), str(last_name)),
+                (self._positive_user_id(user_id), str(first_name), str(last_name)),
             )
 
     def get_user(self, user_id: int) -> sqlite3.Row | None:
         with closing(self.connect()) as db, db:
             return db.execute(
                 "SELECT * FROM users WHERE user_id = ?",
-                (int(user_id),),
+                (self._positive_user_id(user_id),),
             ).fetchone()
 
     def update_xp(self, user_id: int, xp: int, level: int) -> None:
         """Persist XP and level calculated by XPSystem."""
-        normalized_user_id = int(user_id)
+        normalized_user_id = self._positive_user_id(user_id)
         normalized_xp = max(0, int(xp))
         normalized_level = max(1, int(level))
 
@@ -105,11 +115,11 @@ class Database:
         with closing(self.connect()) as db, db:
             db.execute(
                 "UPDATE users SET xp = MAX(0, xp + ?), updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
-                (int(amount), int(user_id)),
+                (int(amount), self._positive_user_id(user_id)),
             )
             row = db.execute(
                 "SELECT xp FROM users WHERE user_id = ?",
-                (int(user_id),),
+                (self._positive_user_id(user_id),),
             ).fetchone()
             return int(row["xp"])
 
@@ -118,15 +128,15 @@ class Database:
         with closing(self.connect()) as db, db:
             db.execute(
                 "UPDATE users SET rp = MAX(0, rp + ?), updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
-                (int(amount), int(user_id)),
+                (int(amount), self._positive_user_id(user_id)),
             )
             db.execute(
                 "INSERT INTO rp_actions(user_id, action, amount) VALUES (?, ?, ?)",
-                (int(user_id), str(action), int(amount)),
+                (self._positive_user_id(user_id), str(action), int(amount)),
             )
             row = db.execute(
                 "SELECT rp FROM users WHERE user_id = ?",
-                (int(user_id),),
+                (self._positive_user_id(user_id),),
             ).fetchone()
             return int(row["rp"])
 
@@ -134,7 +144,7 @@ class Database:
         with closing(self.connect()) as db, db:
             row = db.execute(
                 "SELECT COUNT(*) AS count FROM warnings WHERE user_id = ?",
-                (int(user_id),),
+                (self._positive_user_id(user_id),),
             ).fetchone()
             return int(row["count"])
 
@@ -143,7 +153,7 @@ class Database:
         with closing(self.connect()) as db, db:
             db.execute(
                 "INSERT INTO warnings(user_id, reason) VALUES (?, ?)",
-                (int(user_id), str(reason)),
+                (self._positive_user_id(user_id), str(reason)),
             )
         return self.get_warning_count(user_id)
 
@@ -160,11 +170,11 @@ class Database:
                     LIMIT 1
                 )
                 """,
-                (int(user_id),),
+                (self._positive_user_id(user_id),),
             )
             row = db.execute(
                 "SELECT COUNT(*) AS count FROM warnings WHERE user_id = ?",
-                (int(user_id),),
+                (self._positive_user_id(user_id),),
             ).fetchone()
             return int(row["count"])
 
@@ -174,7 +184,7 @@ class Database:
             raise ValueError("role must be user, moderator, or admin")
         with closing(self.connect()) as db, db:
             if normalized_role == "user":
-                db.execute("DELETE FROM user_roles WHERE user_id = ?", (int(user_id),))
+                db.execute("DELETE FROM user_roles WHERE user_id = ?", (self._positive_user_id(user_id),))
             else:
                 db.execute(
                     """
@@ -184,14 +194,14 @@ class Database:
                         role = excluded.role,
                         updated_at = CURRENT_TIMESTAMP
                     """,
-                    (int(user_id), normalized_role),
+                    (self._positive_user_id(user_id), normalized_role),
                 )
 
     def get_role(self, user_id: int) -> str:
         with closing(self.connect()) as db, db:
             row = db.execute(
                 "SELECT role FROM user_roles WHERE user_id = ?",
-                (int(user_id),),
+                (self._positive_user_id(user_id),),
             ).fetchone()
             return str(row["role"]) if row else "user"
 
@@ -222,7 +232,7 @@ class Database:
                     created_by = excluded.created_by,
                     created_at = CURRENT_TIMESTAMP
                 """,
-                (int(user_id), expires_at, str(reason), int(created_by)),
+                (self._positive_user_id(user_id), expires_at, str(reason), self._positive_user_id(created_by)),
             )
 
     def is_muted(self, user_id: int) -> bool:
@@ -232,7 +242,7 @@ class Database:
                 SELECT expires_at FROM moderation_restrictions
                 WHERE user_id = ? AND restriction_type = 'mute'
                 """,
-                (int(user_id),),
+                (self._positive_user_id(user_id),),
             ).fetchone()
             if row is None:
                 return False
@@ -244,7 +254,7 @@ class Database:
             if not active:
                 db.execute(
                     "DELETE FROM moderation_restrictions WHERE user_id = ?",
-                    (int(user_id),),
+                    (self._positive_user_id(user_id),),
                 )
             return active
 
@@ -252,7 +262,7 @@ class Database:
         with closing(self.connect()) as db, db:
             cursor = db.execute(
                 "DELETE FROM moderation_restrictions WHERE user_id = ? AND restriction_type = 'mute'",
-                (int(user_id),),
+                (self._positive_user_id(user_id),),
             )
             return cursor.rowcount > 0
 
@@ -269,7 +279,7 @@ class Database:
                 INSERT INTO moderation_actions(actor_id, target_id, action, reason)
                 VALUES (?, ?, ?, ?)
                 """,
-                (int(actor_id), int(target_id), str(action), str(reason)),
+                (self._positive_user_id(actor_id), self._positive_user_id(target_id), str(action), str(reason)),
             )
 
     def get_xp_top(self, limit: int = 10) -> list[sqlite3.Row]:
