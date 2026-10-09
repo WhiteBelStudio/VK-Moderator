@@ -10,6 +10,7 @@ from database import Database
 from event_deduplication import EventDeduplicator
 from logging_config import configure_logging
 from marriage import MarriageModule
+from moderation import ModerationModule
 from rules import RulesSystem
 from vk_api import VKAPIClient, VKAPIError
 from vk_longpoll import run_long_poll
@@ -23,6 +24,7 @@ async def handle_event(
     event: dict,
     router: CommandRouter,
     automod: AutoModerationSystem | None = None,
+    db: Database | None = None,
 ) -> None:
     """Передаёт сообщения VK в единый маршрутизатор команд."""
     if not isinstance(event, dict):
@@ -58,6 +60,23 @@ async def handle_event(
 
     if _event_deduplicator.is_duplicate(event):
         logger.info("Ignoring duplicate VK event_id=%s.", event.get("event_id"))
+        return
+
+    if db is not None and db.is_muted(normalized_user_id):
+        message_id = obj.get("id")
+        if message_id is not None:
+            try:
+                await router.vk.call(
+                    "messages.delete",
+                    message_ids=str(int(message_id)),
+                    delete_for_all=1,
+                )
+            except (VKAPIError, TypeError, ValueError):
+                logger.exception(
+                    "Could not delete message from muted user_id=%s.",
+                    normalized_user_id,
+                )
+        logger.info("Ignored message from muted user_id=%s.", normalized_user_id)
         return
 
     if automod is not None:
@@ -113,11 +132,18 @@ async def async_main() -> None:
 
         router = CommandRouter(vk)
         automod = AutoModerationSystem()
+        moderation = ModerationModule(
+            vk=vk,
+            db=db,
+            group_id=config.group_id,
+            admin_ids=config.admin_ids,
+        )
+        router.register_module(moderation)
         router.register_module(MarriageModule(vk, core_db=db))
         router.register_module(RulesSystem(vk))
 
         async def dispatch_event(event: dict) -> None:
-            await handle_event(event, router, automod)
+            await handle_event(event, router, automod, db)
 
         while True:
             try:
