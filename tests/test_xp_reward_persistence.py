@@ -20,6 +20,25 @@ class XPRewardPersistenceTests(unittest.TestCase):
             self.assertEqual(user["xp"], 25)
             self.assertEqual(user["level"], 1)
 
+    def test_level_up_transition_is_persisted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            database = Database(str(Path(directory) / "bot.db"))
+            xp = XPSystem(database)
+            threshold = XPSystem.xp_for_level(2)
+
+            result = xp.add_xp(
+                user_id=12345,
+                amount=threshold,
+                action="test",
+            )
+
+            user = database.get_user(12345)
+            self.assertTrue(result["level_up"])
+            self.assertEqual(result["old_level"], 1)
+            self.assertEqual(result["new_level"], 2)
+            self.assertEqual(user["level"], 2)
+            self.assertEqual(user["xp"], threshold)
+
     def test_non_positive_reward_does_not_change_persisted_xp(self):
         with tempfile.TemporaryDirectory() as directory:
             database = Database(str(Path(directory) / "bot.db"))
