@@ -180,13 +180,13 @@ class RPSystem:
             "обнажил",
             "обнажила",
         )
-        env_words = os.getenv("FORBIDDEN_WORDS")
+        env_words = os.getenv("FORBIDDEN_WORDS", "").strip()
         configured_words = (
             forbidden_words
             if forbidden_words is not None
             else (
                 env_words.split(",")
-                if env_words is not None
+                if env_words
                 else default_forbidden_words
             )
         )
