@@ -282,6 +282,71 @@ class Database:
                 (self._positive_user_id(actor_id), self._positive_user_id(target_id), str(action), str(reason)),
             )
 
+    def backup_to(self, destination: str | Path) -> Path:
+        """Create a consistent SQLite backup using SQLite's online backup API."""
+        destination_path = Path(destination).expanduser().resolve()
+        source_path = Path(self.path).expanduser().resolve()
+        if destination_path == source_path:
+            raise ValueError("Backup destination must differ from the live database.")
+        destination_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with closing(self.connect()) as source, closing(
+            sqlite3.connect(str(destination_path), timeout=30)
+        ) as target:
+            source.backup(target)
+
+        return destination_path
+
+    def restore_from(
+        self,
+        source: str | Path,
+        *,
+        create_backup: bool = True,
+    ) -> Path | None:
+        """Restore a validated backup, preserving the current DB before replacement."""
+        source_path = Path(source).expanduser().resolve()
+        target_path = Path(self.path).expanduser().resolve()
+        if source_path == target_path:
+            raise ValueError("Restore source must differ from the live database.")
+        if not source_path.is_file():
+            raise FileNotFoundError(source_path)
+
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        backup_path: Path | None = None
+
+        with closing(sqlite3.connect(str(source_path), timeout=30)) as source_db:
+            try:
+                row = source_db.execute(
+                    "SELECT COALESCE(MAX(version), 0) FROM schema_migrations"
+                ).fetchone()
+            except sqlite3.Error as exc:
+                raise ValueError("Restore source is not a valid VK-Moderator database.") from exc
+
+            source_version = int(row[0]) if row else 0
+            if source_version > self.SCHEMA_VERSION:
+                raise RuntimeError(
+                    f"Restore source schema {source_version} is newer than supported "
+                    f"schema {self.SCHEMA_VERSION}."
+                )
+            if source_version < 1:
+                raise ValueError("Restore source does not contain a recognized database schema.")
+
+            if create_backup and target_path.is_file():
+                stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+                backup_path = target_path.with_name(
+                    f"{target_path.stem}.pre-restore-{stamp}{target_path.suffix}"
+                )
+                with closing(sqlite3.connect(str(target_path), timeout=30)) as current_db, closing(
+                    sqlite3.connect(str(backup_path), timeout=30)
+                ) as safety_db:
+                    current_db.backup(safety_db)
+
+            with closing(sqlite3.connect(str(target_path), timeout=30)) as target_db:
+                source_db.backup(target_db)
+
+        self._init_db()
+        return backup_path
+
     def get_xp_top(self, limit: int = 10) -> list[sqlite3.Row]:
         limit = max(1, min(int(limit), 50))
         with closing(self.connect()) as db, db:
