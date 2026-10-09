@@ -1,0 +1,2 @@
+ALTER TABLE users ADD COLUMN level INTEGER NOT NULL DEFAULT 1 CHECK (level >= 1);
+CREATE INDEX IF NOT EXISTS idx_users_level ON users(level DESC);
