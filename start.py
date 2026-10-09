@@ -6,6 +6,7 @@ import logging
 from command_router import CommandRouter
 from config import load_config
 from database import Database
+from event_deduplication import EventDeduplicator
 from logging_config import configure_logging
 from marriage import MarriageModule
 from rules import RulesSystem
@@ -13,6 +14,8 @@ from vk_api import VKAPIClient, VKAPIError
 from vk_longpoll import run_long_poll
 
 logger = logging.getLogger("vk-moderator")
+
+_event_deduplicator = EventDeduplicator()
 
 
 async def handle_event(
@@ -49,6 +52,10 @@ async def handle_event(
         normalized_user_id = int(user_id)
     except (TypeError, ValueError):
         logger.warning("Ignoring malformed VK message event: invalid peer_id/from_id.")
+        return
+
+    if _event_deduplicator.is_duplicate(event):
+        logger.info("Ignoring duplicate VK event_id=%s.", event.get("event_id"))
         return
 
     await router.dispatch(
