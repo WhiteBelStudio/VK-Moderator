@@ -24,6 +24,15 @@ class DatabaseUserTests(unittest.TestCase):
         self.assertEqual(updated["last_name"], "Profile")
         self.assertEqual(updated["user_id"], 12345)
 
+    def test_internal_updates_do_not_erase_saved_names(self):
+        self.db.ensure_user(12346, "Saved", "Name")
+
+        self.db.ensure_user(12346)
+
+        user = self.db.get_user(12346)
+        self.assertEqual(user["first_name"], "Saved")
+        self.assertEqual(user["last_name"], "Name")
+
     def test_missing_user_returns_none(self):
         self.assertIsNone(self.db.get_user(987654321))
 
