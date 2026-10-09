@@ -89,5 +89,16 @@ class AutoModerationRuleTests(unittest.TestCase):
         self.assertTrue(result.violated)
         self.assertEqual(result.reason, "Чрезмерное повторение символов")
 
+    def test_warning_cooldown_does_not_disable_enforcement(self):
+        system = AutoModerationSystem(max_message_length=100)
+
+        first = system.check(207, "x" * 101)
+        second = system.check(207, "y" * 101)
+
+        self.assertTrue(first.violated)
+        self.assertTrue(first.notify)
+        self.assertTrue(second.violated)
+        self.assertFalse(second.notify)
+
 if __name__ == "__main__":
     unittest.main()
