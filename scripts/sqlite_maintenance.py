@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 import shutil
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -15,7 +16,7 @@ def validate_database(path: str | Path) -> str:
         raise FileNotFoundError(database_path)
 
     try:
-        with sqlite3.connect(str(database_path), timeout=30) as connection:
+        with closing(sqlite3.connect(str(database_path), timeout=30)) as connection:
             integrity = connection.execute("PRAGMA integrity_check").fetchone()
             if not integrity or integrity[0] != "ok":
                 raise ValueError(f"SQLite integrity check failed for {database_path}")
@@ -58,9 +59,10 @@ def backup_sqlite(source: str | Path, destination: str | Path) -> Path:
         raise FileExistsError(destination_path)
 
     destination_path.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(str(source_path), timeout=30) as source_db:
-        with sqlite3.connect(str(destination_path), timeout=30) as destination_db:
-            source_db.backup(destination_db)
+    with closing(sqlite3.connect(str(source_path), timeout=30)) as source_db, closing(
+        sqlite3.connect(str(destination_path), timeout=30)
+    ) as destination_db:
+        source_db.backup(destination_db)
 
     return destination_path
 
@@ -108,9 +110,10 @@ def restore_sqlite(
         if sidecar.exists():
             sidecar.unlink()
 
-    with sqlite3.connect(str(source_path), timeout=30) as source_db:
-        with sqlite3.connect(str(destination_path), timeout=30) as destination_db:
-            source_db.backup(destination_db)
+    with closing(sqlite3.connect(str(source_path), timeout=30)) as source_db, closing(
+        sqlite3.connect(str(destination_path), timeout=30)
+    ) as destination_db:
+        source_db.backup(destination_db)
 
     if source_kind == "main":
         Database(str(destination_path))
