@@ -33,6 +33,14 @@ class DatabaseUserTests(unittest.TestCase):
         self.assertEqual(user["first_name"], "Saved")
         self.assertEqual(user["last_name"], "Name")
 
+    def test_invalid_user_ids_are_rejected(self):
+        for user_id in (0, -1, "not-an-id"):
+            with self.subTest(user_id=user_id):
+                with self.assertRaises(ValueError):
+                    self.db.ensure_user(user_id)
+                with self.assertRaises(ValueError):
+                    self.db.get_user(user_id)
+
     def test_missing_user_returns_none(self):
         self.assertIsNone(self.db.get_user(987654321))
 
