@@ -1,3 +1,4 @@
+import os
 import unittest
 from unittest.mock import AsyncMock, patch
 
@@ -71,7 +72,7 @@ class _RetrySession:
 
 class VKAPIErrorTests(unittest.IsolatedAsyncioTestCase):
     async def test_invalid_json_is_normalized_to_request_error(self):
-        client = VKAPIClient(token="test-token", retries=0)
+        client = VKAPIClient(token=os.getenv("VK_TEST_TOKEN", "unit-test"), retries=0)
         session = _InvalidJSONSession()
         client._session = session
 
@@ -81,14 +82,14 @@ class VKAPIErrorTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(session.calls, 1)
 
     async def test_missing_response_remains_response_error(self):
-        client = VKAPIClient(token="test-token", retries=0)
+        client = VKAPIClient(token=os.getenv("VK_TEST_TOKEN", "unit-test"), retries=0)
         client._session = _PayloadSession({"unexpected": []})
 
         with self.assertRaises(VKAPIResponseError):
             await client.call("users.get", user_ids="1")
 
     async def test_transient_network_error_is_retried(self):
-        client = VKAPIClient(token="test-token", retries=1)
+        client = VKAPIClient(token=os.getenv("VK_TEST_TOKEN", "unit-test"), retries=1)
         session = _RetrySession()
         client._session = session
 
@@ -99,7 +100,7 @@ class VKAPIErrorTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(session.calls, 2)
 
     async def test_authentication_error_is_not_retried_as_transport_error(self):
-        client = VKAPIClient(token="test-token", retries=0)
+        client = VKAPIClient(token=os.getenv("VK_TEST_TOKEN", "unit-test"), retries=0)
         client._session = _PayloadSession(
             {"error": {"error_code": 5, "error_msg": "Invalid token"}}
         )
