@@ -2,10 +2,15 @@ from __future__ import annotations
 
 import re
 import sqlite3
+import logging
 from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
 from typing import Any
+
+from vk_api import VKAPIError
+
+logger = logging.getLogger("vk-moderator.marriage")
 
 
 # ============================================================
