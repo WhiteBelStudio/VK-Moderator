@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from database import Database
+from scripts.sqlite_maintenance import restore_sqlite
 
 
 def main() -> int:
@@ -27,8 +27,7 @@ def main() -> int:
         parser.error(f"Backup file does not exist: {source_path}")
 
     try:
-        database = Database(str(Path(args.database).expanduser()))
-        safety_copy = database.restore_from(source_path, create_backup=True)
+        safety_copy = restore_sqlite(source_path, Path(args.database).expanduser())
     except (OSError, ValueError, RuntimeError) as exc:
         parser.error(f"Restore failed: {exc}")
 
