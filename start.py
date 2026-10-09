@@ -8,7 +8,6 @@ from automod import AutoModerationSystem
 from config import load_config
 from database import Database
 from event_deduplication import EventDeduplicator
-from event_deduplication import EventDeduplicator
 from logging_config import configure_logging
 from marriage import MarriageModule
 from rules import RulesSystem
