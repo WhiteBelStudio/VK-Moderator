@@ -27,6 +27,12 @@ async def handle_event(
     if not isinstance(obj, dict):
         return
 
+    # VK Callback API wraps the message in object.message. Some Long Poll
+    # versions and test fixtures provide the message fields directly in object.
+    nested_message = obj.get("message")
+    if isinstance(nested_message, dict):
+        obj = nested_message
+
     text = str(obj.get("text") or "").strip()
     peer_id = obj.get("peer_id")
     user_id = obj.get("from_id")
