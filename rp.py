@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 from html import escape
 
@@ -18,6 +19,7 @@ class RPSystem:
         db,
         vk,
         max_text: int = 300,
+        forbidden_words: list[str] | tuple[str, ...] | None = None,
     ):
         self.db = db
         self.vk = vk
@@ -164,7 +166,7 @@ class RPSystem:
             },
         }
 
-        self.forbidden_words = (
+        default_forbidden_words = (
             "секс",
             "трах",
             "трахнул",
@@ -177,6 +179,21 @@ class RPSystem:
             "голая",
             "обнажил",
             "обнажила",
+        )
+        env_words = os.getenv("FORBIDDEN_WORDS")
+        configured_words = (
+            forbidden_words
+            if forbidden_words is not None
+            else (
+                env_words.split(",")
+                if env_words is not None
+                else default_forbidden_words
+            )
+        )
+        self.forbidden_words = tuple(
+            str(word).casefold().strip()
+            for word in configured_words
+            if str(word).strip()
         )
 
     @staticmethod
