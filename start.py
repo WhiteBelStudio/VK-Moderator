@@ -25,6 +25,7 @@ async def handle_event(
     router: CommandRouter,
     automod: AutoModerationSystem | None = None,
     db: Database | None = None,
+    admin_ids: set[int] | None = None,
 ) -> None:
     """Передаёт сообщения VK в единый маршрутизатор команд."""
     if not isinstance(event, dict):
@@ -79,7 +80,11 @@ async def handle_event(
         logger.info("Ignored message from muted user_id=%s.", normalized_user_id)
         return
 
-    if automod is not None:
+    privileged_users = {int(value) for value in (admin_ids or set())}
+    if db is not None and db.get_role(normalized_user_id) in {"moderator", "admin"}:
+        privileged_users.add(normalized_user_id)
+
+    if automod is not None and normalized_user_id not in privileged_users:
         result = automod.check(normalized_user_id, text)
         if result.violated:
             message_id = obj.get("id")
@@ -149,7 +154,7 @@ async def async_main() -> None:
         router.register_module(RulesSystem(vk))
 
         async def dispatch_event(event: dict) -> None:
-            await handle_event(event, router, automod, db)
+            await handle_event(event, router, automod, db, config.admin_ids)
 
         while True:
             try:
