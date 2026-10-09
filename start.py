@@ -4,8 +4,10 @@ import asyncio
 import logging
 
 from command_router import CommandRouter
+from automod import AutoModerationSystem
 from config import load_config
 from database import Database
+from event_deduplication import EventDeduplicator
 from event_deduplication import EventDeduplicator
 from logging_config import configure_logging
 from marriage import MarriageModule
@@ -21,6 +23,7 @@ _event_deduplicator = EventDeduplicator()
 async def handle_event(
     event: dict,
     router: CommandRouter,
+    automod: AutoModerationSystem | None = None,
 ) -> None:
     """Передаёт сообщения VK в единый маршрутизатор команд."""
     if not isinstance(event, dict):
@@ -58,6 +61,35 @@ async def handle_event(
         logger.info("Ignoring duplicate VK event_id=%s.", event.get("event_id"))
         return
 
+    if automod is not None:
+        result = automod.check(normalized_user_id, text)
+        if result.violated:
+            message_id = obj.get("id")
+            if message_id is not None:
+                try:
+                    await router.vk.call(
+                        "messages.delete",
+                        message_ids=str(int(message_id)),
+                        delete_for_all=1,
+                    )
+                except (VKAPIError, TypeError, ValueError):
+                    logger.exception(
+                        "AutoMod could not delete violating message_id=%s.",
+                        message_id,
+                    )
+
+            try:
+                await router.send(
+                    normalized_peer_id,
+                    f"⚠️ Сообщение отклонено: {result.reason}.",
+                )
+            except VKAPIError:
+                logger.exception(
+                    "AutoMod could not notify peer_id=%s.",
+                    normalized_peer_id,
+                )
+            return
+
     await router.dispatch(
         peer_id=normalized_peer_id,
         user_id=normalized_user_id,
@@ -81,11 +113,12 @@ async def async_main() -> None:
         )
 
         router = CommandRouter(vk)
+        automod = AutoModerationSystem()
         router.register_module(MarriageModule(vk, core_db=db))
         router.register_module(RulesSystem(vk))
 
         async def dispatch_event(event: dict) -> None:
-            await handle_event(event, router)
+            await handle_event(event, router, automod)
 
         while True:
             try:
