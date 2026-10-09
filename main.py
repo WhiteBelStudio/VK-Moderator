@@ -8,3 +8,8 @@ incrementally split into dedicated modules.
 from marriage import MarriageDatabase, MarriageModule
 
 __all__ = ["MarriageDatabase", "MarriageModule"]
+
+if __name__ == "__main__":
+    from start import main as run_bot
+
+    run_bot()
