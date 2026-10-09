@@ -1214,7 +1214,7 @@ class MarriageModule:
 
                 return result[0]
 
-        except (VKAPIError, sqlite3.Error, TypeError, ValueError, KeyError):
+        except (VKAPIError, sqlite3.Error, TypeError, KeyError):
 
             logger.exception("Optional marriage operation failed.")
 
