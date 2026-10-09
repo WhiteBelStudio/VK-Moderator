@@ -11,6 +11,7 @@ from event_deduplication import EventDeduplicator
 from logging_config import configure_logging
 from marriage import MarriageModule
 from moderation import ModerationModule
+from profile import ProfileSystem
 from rules import RulesSystem
 from xp import XPSystem
 from vk_api import VKAPIClient, VKAPIError
@@ -162,7 +163,16 @@ async def async_main() -> None:
             admin_ids=config.admin_ids,
         )
         router.register_module(moderation)
-        router.register_module(MarriageModule(vk, core_db=db))
+        marriage = MarriageModule(vk, core_db=db)
+        router.register_module(marriage)
+        router.register_module(
+            ProfileSystem(
+                bot=vk,
+                db=db,
+                config=config,
+                marriage=marriage,
+            )
+        )
         router.register_module(RulesSystem(vk))
 
         async def dispatch_event(event: dict) -> None:
