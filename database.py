@@ -399,20 +399,20 @@ class ManiacDatabase:
 
     def record_game(self, user_id: int, first_name: str, role: str, won: bool) -> None:
         self.ensure_player(user_id, first_name)
-        role_column = {
-            "maniac": "maniac_games",
-            "sheriff": "sheriff_games",
-            "doctor": "doctor_games",
-            "civilian": "civilian_games",
+        role_update_sql = {
+            "maniac": "UPDATE players SET maniac_games = maniac_games + 1 WHERE user_id = ?",
+            "sheriff": "UPDATE players SET sheriff_games = sheriff_games + 1 WHERE user_id = ?",
+            "doctor": "UPDATE players SET doctor_games = doctor_games + 1 WHERE user_id = ?",
+            "civilian": "UPDATE players SET civilian_games = civilian_games + 1 WHERE user_id = ?",
         }.get(role)
         with closing(self._connect()) as connection, connection:
             connection.execute(
                 "UPDATE players SET games = games + 1, wins = wins + ?, losses = losses + ? WHERE user_id = ?",
                 (1 if won else 0, 0 if won else 1, int(user_id)),
             )
-            if role_column:
+            if role_update_sql:
                 connection.execute(
-                    f"UPDATE players SET {role_column} = {role_column} + 1 WHERE user_id = ?",
+                    role_update_sql,
                     (int(user_id),),
                 )
 
