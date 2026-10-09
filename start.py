@@ -96,15 +96,21 @@ async def handle_event(
                         message_id,
                     )
 
-            try:
-                await router.send(
-                    normalized_peer_id,
-                    f"⚠️ Сообщение отклонено: {result.reason}.",
-                )
-            except VKAPIError:
-                logger.exception(
-                    "AutoMod could not notify peer_id=%s.",
-                    normalized_peer_id,
+            if result.notify:
+                try:
+                    await router.send(
+                        normalized_peer_id,
+                        f"⚠️ Сообщение отклонено: {result.reason}.",
+                    )
+                except VKAPIError:
+                    logger.exception(
+                        "AutoMod could not notify peer_id=%s.",
+                        normalized_peer_id,
+                    )
+            else:
+                logger.debug(
+                    "AutoMod warning suppressed by cooldown for user_id=%s.",
+                    normalized_user_id,
                 )
             return
 
