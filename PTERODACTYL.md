@@ -18,7 +18,7 @@ Configure these values in the Pterodactyl startup/environment panel. Do not comm
 | `VK_API_VERSION` | No | VK API version; default `5.199` |
 | `ADMIN_IDS` | No | Comma-separated positive VK user IDs allowed to manage roles |
 | `XP_PER_MESSAGE` | No | XP reward configuration |
-| `XP_PER_LEVEL` | No | XP configuration value |
+| `XP_PER_LEVEL` | No | Legacy setting; the current nonlinear level thresholds are defined by `XPSystem` and do not use this variable |
 | `MAX_RP_TEXT` | No | Maximum RP text length |
 | `LOG_LEVEL` | No | Logging level; default `INFO` |
 | `FORBIDDEN_WORDS` | No | Additional AutoMod words, comma-separated |
@@ -44,7 +44,8 @@ Configure these values in the Pterodactyl startup/environment panel. Do not comm
 4. Confirm the community token has the permissions needed for message handling and moderation methods.
 5. Start `python start.py` and inspect the startup logs.
 6. Verify the bot receives a test message and can send a reply.
-7. Verify moderation actions only in a test conversation/community where you have authorization.
-8. Confirm a backup can be created and restored before relying on production data.
+7. Enable Pterodactyl's automatic restart policy for unexpected process exits; the app logs fatal errors and exits rather than silently continuing in a broken state.
+8. Verify moderation actions only in a test conversation/community where you have authorization.
+9. Confirm a backup can be created and restored before relying on production data.
 
 The repository CI and static security workflow do **not** verify a real VK token, community permissions, or a live Pterodactyl restart. Those remain deployment checks.
