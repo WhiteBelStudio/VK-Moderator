@@ -111,7 +111,8 @@ class VKAPIClient:
             raise ValueError("VK method must look like 'users.get'.")
 
         await self.start()
-        assert self._session is not None
+        if self._session is None:
+            raise VKAPIRequestError("VK API HTTP session could not be initialized.")
 
         request_params = {
             **params,
