@@ -12,6 +12,7 @@ from logging_config import configure_logging
 from marriage import MarriageModule
 from moderation import ModerationModule
 from rules import RulesSystem
+from xp import XPSystem
 from vk_api import VKAPIClient, VKAPIError
 from vk_longpoll import run_long_poll
 
@@ -26,6 +27,7 @@ async def handle_event(
     automod: AutoModerationSystem | None = None,
     db: Database | None = None,
     admin_ids: set[int] | None = None,
+    xp_system: XPSystem | None = None,
 ) -> None:
     """Передаёт сообщения VK в единый маршрутизатор команд."""
     if not isinstance(event, dict):
@@ -119,6 +121,15 @@ async def handle_event(
                 )
             return
 
+    if xp_system is not None:
+        try:
+            xp_system.process_message(normalized_user_id)
+        except Exception:
+            logger.exception(
+                "Could not award message XP to user_id=%s.",
+                normalized_user_id,
+            )
+
     await router.dispatch(
         peer_id=normalized_peer_id,
         user_id=normalized_user_id,
@@ -143,6 +154,7 @@ async def async_main() -> None:
 
         router = CommandRouter(vk)
         automod = AutoModerationSystem()
+        xp_system = XPSystem(db)
         moderation = ModerationModule(
             vk=vk,
             db=db,
@@ -154,7 +166,7 @@ async def async_main() -> None:
         router.register_module(RulesSystem(vk))
 
         async def dispatch_event(event: dict) -> None:
-            await handle_event(event, router, automod, db, config.admin_ids)
+            await handle_event(event, router, automod, db, config.admin_ids, xp_system)
 
         while True:
             try:
