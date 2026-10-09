@@ -1,5 +1,8 @@
+import logging
 import re
 from html import escape
+
+logger = logging.getLogger("vk-moderator.rp")
 
 
 class RPSystem:
@@ -249,7 +252,7 @@ class RPSystem:
                     return first_name
 
         except Exception:
-            pass
+            logger.exception("RP operation failed.")
 
         try:
             vk_user = await self.vk.get_user(user_id)
@@ -264,7 +267,7 @@ class RPSystem:
                     return first_name
 
         except Exception:
-            pass
+            logger.exception("RP operation failed.")
 
         return fallback
 
@@ -423,7 +426,7 @@ class RPSystem:
                 action=action_text,
             )
         except Exception:
-            pass
+            logger.exception("RP operation failed.")
 
         await self._send(
             peer_id,
@@ -465,7 +468,7 @@ class RPSystem:
                     message=text,
                 )
             except Exception:
-                pass
+                logger.exception("RP operation failed.")
 
         except Exception:
-            pass
+            logger.exception("RP operation failed.")
