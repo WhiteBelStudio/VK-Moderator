@@ -88,5 +88,24 @@ class HandleEventTests(unittest.IsolatedAsyncioTestCase):
 
         router.dispatch.assert_not_awaited()
 
+    async def test_ignores_non_positive_identifiers(self):
+        for user_id in (0, -123):
+            with self.subTest(user_id=user_id):
+                router = AsyncMock()
+                event = {
+                    "type": "message_new",
+                    "object": {
+                        "message": {
+                            "text": "!help",
+                            "peer_id": 2000000001,
+                            "from_id": user_id,
+                        }
+                    },
+                }
+
+                await handle_event(event, router)
+
+                router.dispatch.assert_not_awaited()
+
 if __name__ == "__main__":
     unittest.main()
