@@ -14,7 +14,7 @@ class ConfigValidationTests(unittest.TestCase):
         ):
             config = load_config()
 
-        self.assertEqual(config.vk_token, "test-token")
+        self.assertEqual(config.vk_token, "placeholder")
         self.assertEqual(config.group_id, 12345)
         self.assertEqual(config.api_version, "5.199")
         self.assertEqual(config.admin_ids, set())
