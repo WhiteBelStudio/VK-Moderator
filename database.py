@@ -63,8 +63,14 @@ class Database:
                 INSERT INTO users(user_id, first_name, last_name)
                 VALUES (?, ?, ?)
                 ON CONFLICT(user_id) DO UPDATE SET
-                    first_name = excluded.first_name,
-                    last_name = excluded.last_name,
+                    first_name = CASE
+                        WHEN excluded.first_name <> '' THEN excluded.first_name
+                        ELSE users.first_name
+                    END,
+                    last_name = CASE
+                        WHEN excluded.last_name <> '' THEN excluded.last_name
+                        ELSE users.last_name
+                    END,
                     updated_at = CURRENT_TIMESTAMP
                 """,
                 (int(user_id), str(first_name), str(last_name)),
