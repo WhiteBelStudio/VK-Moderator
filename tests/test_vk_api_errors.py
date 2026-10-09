@@ -1,4 +1,7 @@
 import unittest
+from unittest.mock import AsyncMock, patch
+
+import aiohttp
 
 from vk_api import (
     VKAPIAuthError,
@@ -51,6 +54,21 @@ class _PayloadSession:
         return _PayloadResponse(self.payload)
 
 
+class _RetrySession:
+    closed = False
+
+    def __init__(self):
+        self.calls = 0
+
+    def post(self, url, data):
+        self.calls += 1
+        if self.calls == 1:
+            raise aiohttp.ClientConnectionError("temporary network failure")
+        return _PayloadResponse({"response": [{"id": 1}]})
+
+
+
+
 class VKAPIErrorTests(unittest.IsolatedAsyncioTestCase):
     async def test_invalid_json_is_normalized_to_request_error(self):
         client = VKAPIClient(token="test-token", retries=0)
@@ -68,6 +86,17 @@ class VKAPIErrorTests(unittest.IsolatedAsyncioTestCase):
 
         with self.assertRaises(VKAPIResponseError):
             await client.call("users.get", user_ids="1")
+
+    async def test_transient_network_error_is_retried(self):
+        client = VKAPIClient(token="test-token", retries=1)
+        session = _RetrySession()
+        client._session = session
+
+        with patch("vk_api.asyncio.sleep", new_callable=AsyncMock):
+            result = await client.call("users.get", user_ids="1")
+
+        self.assertEqual(result, {"response": [{"id": 1}]})
+        self.assertEqual(session.calls, 2)
 
     async def test_authentication_error_is_not_retried_as_transport_error(self):
         client = VKAPIClient(token="test-token", retries=0)
