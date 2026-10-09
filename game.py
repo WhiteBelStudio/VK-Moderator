@@ -1306,7 +1306,10 @@ class ManiacGame:
                     self.lobby_message_id,
                 )
             except Exception:
-                pass
+                logger.exception(
+                    "Не удалось открепить сообщение лобби message_id=%s",
+                    self.lobby_message_id,
+                )
 
             if delete_lobby:
                 try:
@@ -1315,7 +1318,10 @@ class ManiacGame:
                         self.lobby_message_id,
                     )
                 except Exception:
-                    pass
+                    logger.exception(
+                        "Не удалось удалить сообщение лобби message_id=%s",
+                        self.lobby_message_id,
+                    )
 
             self.lobby_message_id = None
 
