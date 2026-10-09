@@ -9,7 +9,7 @@ class ConfigValidationTests(unittest.TestCase):
     def test_minimal_valid_configuration_uses_defaults(self):
         with patch.dict(
             os.environ,
-            {"VK_TOKEN": "test-token", "VK_GROUP_ID": "12345"},
+            {"VK_TOKEN": os.environ.get("VK_TEST_TOKEN", "placeholder"), "VK_GROUP_ID": "12345"},
             clear=True,
         ):
             config = load_config()
@@ -27,7 +27,7 @@ class ConfigValidationTests(unittest.TestCase):
     def test_invalid_group_id_is_rejected(self):
         with patch.dict(
             os.environ,
-            {"VK_TOKEN": "test-token", "VK_GROUP_ID": "not-a-number"},
+            {"VK_TOKEN": os.environ.get("VK_TEST_TOKEN", "placeholder"), "VK_GROUP_ID": "not-a-number"},
             clear=True,
         ):
             with self.assertRaisesRegex(RuntimeError, "VK_GROUP_ID"):
@@ -37,7 +37,7 @@ class ConfigValidationTests(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
-                "VK_TOKEN": "test-token",
+                "VK_TOKEN": os.environ.get("VK_TEST_TOKEN", "placeholder"),
                 "VK_GROUP_ID": "12345",
                 "ADMIN_IDS": "123,not-an-id",
             },
@@ -50,7 +50,7 @@ class ConfigValidationTests(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
-                "VK_TOKEN": "test-token",
+                "VK_TOKEN": os.environ.get("VK_TEST_TOKEN", "placeholder"),
                 "VK_GROUP_ID": "12345",
                 "ADMIN_IDS": "0",
             },
