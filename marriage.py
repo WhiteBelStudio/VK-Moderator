@@ -17,6 +17,16 @@ logger = logging.getLogger("vk-moderator.marriage")
 # DATABASE
 # ============================================================
 
+class _ClosingConnection(sqlite3.Connection):
+    """Close SQLite connections automatically when used as a context manager."""
+
+    def __exit__(self, exc_type, exc, traceback):
+        try:
+            return super().__exit__(exc_type, exc, traceback)
+        finally:
+            self.close()
+
+
 class MarriageDatabase:
     """
     Отдельная БД системы игровых браков.
@@ -49,6 +59,7 @@ class MarriageDatabase:
         conn = sqlite3.connect(
             self.db_path,
             timeout=30,
+            factory=_ClosingConnection,
         )
 
         conn.row_factory = sqlite3.Row
