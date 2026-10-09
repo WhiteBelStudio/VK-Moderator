@@ -62,6 +62,10 @@ async def handle_event(
         logger.warning("Ignoring malformed VK message event: invalid peer_id/from_id.")
         return
 
+    if normalized_peer_id <= 0 or normalized_user_id <= 0:
+        logger.warning("Ignoring VK message event with non-positive peer_id/from_id.")
+        return
+
     if _event_deduplicator.is_duplicate(event):
         logger.info("Ignoring duplicate VK event_id=%s.", event.get("event_id"))
         return
