@@ -148,6 +148,15 @@ class VKAPIClient:
 
                 return payload
 
+            except VKAPIRateLimitError as exc:
+                last_error = exc
+                if attempt < self.retries:
+                    # VK rate limits are temporary; keep retries bounded.
+                    await asyncio.sleep(min(1 + (2 ** attempt), 10))
+                    continue
+                raise VKAPIRequestError(
+                    f"VK rate limit persisted after {self.retries + 1} attempts: {method}"
+                ) from exc
             except (VKAPIMethodError, VKAPIResponseError):
                 raise
             except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
