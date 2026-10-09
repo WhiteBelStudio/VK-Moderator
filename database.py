@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 
@@ -50,12 +51,12 @@ class Database:
         return self.connect()
 
     def _init_db(self) -> None:
-        with self.connect() as db:
+        with closing(self.connect()) as db, db:
             self._apply_migrations(db)
             # Schema is created exclusively by numbered migrations.
 
     def ensure_user(self, user_id: int, first_name: str = "", last_name: str = "") -> None:
-        with self.connect() as db:
+        with closing(self.connect()) as db, db:
             db.execute(
                 """
                 INSERT INTO users(user_id, first_name, last_name)
@@ -69,7 +70,7 @@ class Database:
             )
 
     def get_user(self, user_id: int) -> sqlite3.Row | None:
-        with self.connect() as db:
+        with closing(self.connect()) as db, db:
             return db.execute(
                 "SELECT * FROM users WHERE user_id = ?",
                 (int(user_id),),
@@ -77,7 +78,7 @@ class Database:
 
     def add_xp(self, user_id: int, amount: int) -> int:
         self.ensure_user(user_id)
-        with self.connect() as db:
+        with closing(self.connect()) as db, db:
             db.execute(
                 "UPDATE users SET xp = MAX(0, xp + ?), updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
                 (int(amount), int(user_id)),
@@ -90,7 +91,7 @@ class Database:
 
     def add_rp_action(self, user_id: int, action: str, amount: int) -> int:
         self.ensure_user(user_id)
-        with self.connect() as db:
+        with closing(self.connect()) as db, db:
             db.execute(
                 "UPDATE users SET rp = MAX(0, rp + ?), updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
                 (int(amount), int(user_id)),
@@ -106,7 +107,7 @@ class Database:
             return int(row["rp"])
 
     def get_warning_count(self, user_id: int) -> int:
-        with self.connect() as db:
+        with closing(self.connect()) as db, db:
             row = db.execute(
                 "SELECT COUNT(*) AS count FROM warnings WHERE user_id = ?",
                 (int(user_id),),
@@ -115,7 +116,7 @@ class Database:
 
     def add_warning(self, user_id: int, reason: str = "") -> int:
         self.ensure_user(user_id)
-        with self.connect() as db:
+        with closing(self.connect()) as db, db:
             db.execute(
                 "INSERT INTO warnings(user_id, reason) VALUES (?, ?)",
                 (int(user_id), str(reason)),
@@ -124,7 +125,7 @@ class Database:
 
     def get_xp_top(self, limit: int = 10) -> list[sqlite3.Row]:
         limit = max(1, min(int(limit), 50))
-        with self.connect() as db:
+        with closing(self.connect()) as db, db:
             return db.execute(
                 "SELECT * FROM users WHERE xp > 0 ORDER BY xp DESC, user_id ASC LIMIT ?",
                 (limit,),
@@ -147,7 +148,7 @@ class ManiacDatabase:
         return connection
 
     def _init_db(self) -> None:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS players (
@@ -165,7 +166,7 @@ class ManiacDatabase:
             )
 
     def ensure_player(self, user_id: int, first_name: str) -> None:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute(
                 "INSERT INTO players(user_id, first_name) VALUES (?, ?) "
                 "ON CONFLICT(user_id) DO UPDATE SET first_name = excluded.first_name",
@@ -180,7 +181,7 @@ class ManiacDatabase:
             "doctor": "doctor_games",
             "civilian": "civilian_games",
         }.get(role)
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute(
                 "UPDATE players SET games = games + 1, wins = wins + ?, losses = losses + ? WHERE user_id = ?",
                 (1 if won else 0, 0 if won else 1, int(user_id)),
@@ -192,7 +193,7 @@ class ManiacDatabase:
                 )
 
     def get_stats(self, user_id: int) -> sqlite3.Row | None:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             return connection.execute(
                 "SELECT * FROM players WHERE user_id = ?",
                 (int(user_id),),
@@ -200,7 +201,7 @@ class ManiacDatabase:
 
     def get_top(self, limit: int = 10) -> list[sqlite3.Row]:
         limit = max(1, min(int(limit), 50))
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             return connection.execute(
                 "SELECT * FROM players WHERE games > 0 ORDER BY wins DESC, games DESC LIMIT ?",
                 (limit,),
