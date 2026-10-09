@@ -4,12 +4,14 @@ import logging
 import re
 from html import escape
 
+from xp import XPSystem
+
 logger = logging.getLogger("VKBot.Profile")
 
 
 class ProfileSystem:
 
-    XP_PER_LEVEL = 150
+    COMMANDS = {"!профиль"}
 
     def __init__(
         self,
@@ -397,126 +399,16 @@ class ProfileSystem:
         cls,
         xp: int,
     ) -> dict[str, int]:
-
-        xp = max(
-            0,
-            int(xp),
-        )
-
-        # ----------------------------------------------------
-        # УРОВНИ
-        #
-        # 0-149   -> 1
-        # 150-299 -> 1
-        # 300-449 -> 2
-        # 450-599 -> 3
-        # 600-749 -> 4
-        # 750-899 -> 5
-        #
-        # Например:
-        # 611 XP -> уровень 4
-        # 611 / 750
-        # до следующего 139 XP
-        # прогресс 7%
-        # ----------------------------------------------------
-
-        level = max(
-            1,
-            xp // cls.XP_PER_LEVEL,
-        )
-
-        level_start = (
-            level * cls.XP_PER_LEVEL
-        )
-
-        next_level_start = (
-            (level + 1)
-            * cls.XP_PER_LEVEL
-        )
-
-        required_for_next = (
-            next_level_start
-            - level_start
-        )
-
-        # ----------------------------------------------------
-        # ПЕРВЫЙ УРОВЕНЬ
-        # ----------------------------------------------------
-
-        if (
-            level == 1
-            and xp < cls.XP_PER_LEVEL
-        ):
-
-            current_xp = xp
-
-            remaining_xp = (
-                cls.XP_PER_LEVEL - xp
-            )
-
-            percent = int(
-                (
-                    xp
-                    / cls.XP_PER_LEVEL
-                )
-                * 100
-            )
-
-        # ----------------------------------------------------
-        # ОСТАЛЬНЫЕ УРОВНИ
-        # ----------------------------------------------------
-
-        else:
-
-            # Показываем абсолютное количество XP.
-            #
-            # Например:
-            # 611 / 750
-            # 609 / 750
-            # 580 / 600
-
-            current_xp = xp
-
-            remaining_xp = max(
-                0,
-                next_level_start - xp,
-            )
-
-            progress_range = (
-                next_level_start
-                - level_start
-            )
-
-            if progress_range <= 0:
-
-                percent = 100
-
-            else:
-
-                percent = int(
-                    (
-                        (
-                            xp
-                            - level_start
-                        )
-                        / progress_range
-                    )
-                    * 100
-                )
-
-        percent = max(
-            0,
-            min(100, percent),
-        )
-
+        """Use the same nonlinear XP thresholds as the XP reward system."""
+        progress = XPSystem.get_progress_from_xp(max(0, int(xp)))
         return {
-            "level": level,
-            "current_xp": current_xp,
-            "level_xp": next_level_start,
-            "required_for_next": required_for_next,
-            "percent": percent,
-            "next_level_xp": remaining_xp,
-            "total_xp": xp,
+            "level": progress.level,
+            "current_xp": progress.current_level_xp,
+            "level_xp": progress.required_for_next,
+            "required_for_next": progress.required_for_next,
+            "percent": progress.percent,
+            "next_level_xp": progress.remaining_xp,
+            "total_xp": progress.total_xp,
         }
 
     @staticmethod
@@ -790,6 +682,19 @@ class ProfileSystem:
             lines
         )
 
+    async def _reply(self, peer_id: int, message: str) -> None:
+        sender = getattr(self.bot, "reply", None)
+        if callable(sender):
+            await sender(int(peer_id), str(message))
+            return
+
+        sender = getattr(self.bot, "send_message", None)
+        if callable(sender):
+            await sender(peer_id=int(peer_id), message=str(message))
+            return
+
+        raise RuntimeError("ProfileSystem bot does not support replying.")
+
     # ========================================================
     # SHOW PROFILE
     # ========================================================
@@ -806,14 +711,14 @@ class ProfileSystem:
 
         if profile is None:
 
-            await self.bot.reply(
+            await self._reply(
                 peer_id,
                 "❌ Профиль ещё не создан.",
             )
 
             return
 
-        await self.bot.reply(
+        await self._reply(
             peer_id,
             profile,
         )
@@ -821,6 +726,15 @@ class ProfileSystem:
     # ========================================================
     # COMMAND
     # ========================================================
+
+    async def handle_message(
+        self,
+        peer_id: int,
+        user_id: int,
+        text: str,
+        first_name: str | None = None,
+    ) -> bool:
+        return await self.handle_command(peer_id, user_id, text)
 
     async def handle_command(
         self,
