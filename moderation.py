@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+import sqlite3
 from typing import Any
 
 from database import Database
@@ -212,7 +213,7 @@ class ModerationModule:
                 target_id,
             )
             await self._reply(peer_id, "❌ VK не выполнил действие. Проверьте права сообщества и журнал.")
-        except (ValueError, TypeError, KeyError) as exc:
+        except (ValueError, TypeError, KeyError, sqlite3.Error) as exc:
             logger.exception(
                 "Invalid moderation action: command=%s actor=%s target=%s",
                 command,
