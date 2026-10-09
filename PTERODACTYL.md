@@ -32,9 +32,9 @@ Configure these values in the Pterodactyl startup/environment panel. Do not comm
 - Keep the `data/` directory on persistent storage when recreating or updating the server.
 - Back up the main database before schema or deployment changes. Example:
 
-  `python scripts/backup_database.py --database data/bot.db --destination data/backups/vk-moderator.sqlite3`
+  `python -m scripts.backup_database --database data/bot.db --destination data/backups/vk-moderator.sqlite3`
 
-- Restore from a backup only during maintenance. The restore API creates a safety copy of the current database before replacing it.
+- Restore from a backup only during maintenance. The restore API creates a safety copy of the current database before replacing it. Example: `python -m scripts.restore_database --database data/bot.db --source data/backups/vk-moderator.sqlite3`.
 
 ## First-run checklist
 
