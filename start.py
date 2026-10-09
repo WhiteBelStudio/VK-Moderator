@@ -159,7 +159,7 @@ async def async_main() -> None:
 
         router = CommandRouter(vk)
         automod = AutoModerationSystem()
-        xp_system = XPSystem(db)
+        xp_system = XPSystem(db, message_xp=config.xp_per_message)
         moderation = ModerationModule(
             vk=vk,
             db=db,
