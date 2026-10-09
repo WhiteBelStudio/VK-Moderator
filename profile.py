@@ -750,10 +750,9 @@ class ProfileSystem:
         )
 
         if not (
-            normalized == "!профиль"
-            or normalized.startswith(
-                "!профиль "
-            )
+            normalized in {"!профиль", "/профиль"}
+            or normalized.startswith("!профиль ")
+            or normalized.startswith("/профиль ")
         ):
 
             return False
