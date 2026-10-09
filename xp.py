@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import time
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
 from database import Database
+
+logger = logging.getLogger("vk-moderator.xp")
 
 
 # =========================================================
@@ -1488,7 +1491,7 @@ class XPSystem:
                 )
 
             except Exception:
-                pass
+                logger.exception("XP operation failed.")
 
             result.append({
                 "id": achievement_id,
